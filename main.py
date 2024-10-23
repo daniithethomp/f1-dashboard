@@ -22,14 +22,21 @@ def driver_standings(track, season):
         count += 1
     canvas.grid(row=0,column=0)
 
-def constructor_standings():
-    constructor_standings_label_frame = LabelFrame(root,text="Constructor Standings")
-    constructor_standings_results = get_constructor_standings()[0]
+def constructor_standings(track, season):
+    global canvas
+    try:
+        canvas.get_tk_widget().grid_forget()
+    except Exception as e:
+        canvas.grid_forget()
+    canvas = Frame(canvasFrame)
+    count = 0
+    constructor_standings_results = get_constructor_standings(track,season)[0]
     for constructor in constructor_standings_results["ConstructorStandings"]:
         text = f"{constructor['position']} {constructor['Constructor']['name']} - {constructor['points']}"
-        label = Label(constructor_standings_label_frame, text=text)
-        label.pack()
-    constructor_standings_label_frame.grid(column=3,row=0,rowspan=5)
+        label = Label(canvas, text=text)
+        label.grid(row=(count % 10),column=(count // 10))
+        count += 1
+    canvas.grid(column=0,row=0)
 
 def track_map():
     track = track_select.get()
@@ -42,6 +49,23 @@ def track_map():
     canvas.draw()
     canvas.get_tk_widget().grid(row=4,column=0)
 
+def show_session_results(session, track, season):
+    results = get_session_results(season, track, session)
+    global canvas
+    canvas.grid_forget()
+    canvas = Label(canvasFrame,text=results.to_string(columns=['Position','FullName','DriverNumber','TeamName','Time','Points'],justify='left',max_colwidth=25,col_space=30,index=False))
+    canvas.grid(row=0,column=0)
+
+def draw_fastest_lap(season, track, session):
+    fig = plot_fastest_lap(season, track, session)
+    
+    global canvas
+    canvas.grid_forget()
+    canvas = FigureCanvasTkAgg(fig, master=canvasFrame)
+    canvas.draw()
+    canvas.get_tk_widget().grid(row=0,column=0)
+
+
 def driver_view(root):
     pass
 
@@ -50,14 +74,6 @@ def reset():
 
 def updateComboBoxes(e):
     print("updating")
-    if season_select.get() and track_select.get():
-        event = get_event(int(season_select.get()), track_select.get())
-        if event['EventFormat'] == 'conventional':
-            session_select.config(values=['Practice 1', 'Practice 2', 'Practice 3', 'Qualifying', 'Race'])
-        elif event['EventFormat'] == 'sprint':
-            session_select.config(values=['Practice 1', 'Qualifying', 'Practice 2', 'Sprint', 'Race'])
-        elif event['EventFormat'] == 'sprint_shootout':
-            session_select.config(values=['Practice','Qualifying','Sprint Shootout','Sprint','Race'])
     if season_select.get():
         season = int(season_select.get())
         if season < 2021:
@@ -77,7 +93,14 @@ def updateComboBoxes(e):
             season_select.config(values=seasons)
             tracks = get_tracks_over_seasons(seasons)
             track_select.config(values=list(tracks))
-
+    if season_select.get() and track_select.get():
+        event = get_event(int(season_select.get()), track_select.get())
+        if event['EventFormat'] == 'conventional':
+            session_select.config(values=['Practice 1', 'Practice 2', 'Practice 3', 'Qualifying', 'Race'])
+        elif event['EventFormat'] == 'sprint':
+            session_select.config(values=['Practice 1', 'Qualifying', 'Practice 2', 'Sprint', 'Race'])
+        elif event['EventFormat'] == 'sprint_shootout':
+            session_select.config(values=['Practice','Qualifying','Sprint Shootout','Sprint','Race'])
 
 def gp_view(root):
     reset()
@@ -87,19 +110,25 @@ def gp_view(root):
     track_select = ttk.Combobox(drop_down_frame, values=all_tracks['circuitId'].tolist(),state='readonly')
     season_select = ttk.Combobox(drop_down_frame,values=all_seasons['season'].tolist(),state='readonly')
     session_select = ttk.Combobox(drop_down_frame,values=['Practice 1', 'Practice 2', 'Practice 3', 'Sprint', 'Sprint Shootout', 'Sprint Qualifying', 'Qualifying', 'Race'],state='readonly')
-    track_map_b = Button(action_button_frame, text="Show Track", command=track_map)
-    driver_stand_b = Button(action_button_frame, text="Show Driver Standings",command=lambda: driver_standings(track_select.get(),season_select.get()))
-    driver_stand_b.grid(row=1,column=0,padx=10)
 
     track_select.grid(row=0,column=0,padx=10)
     season_select.grid(row=0,column=1,padx=10)
     session_select.grid(row=0,column=2,padx=10)
-    track_map_b.grid()
 
     track_select.bind('<<ComboboxSelected>>', updateComboBoxes)
     season_select.bind('<<ComboboxSelected>>', updateComboBoxes)
     session_select.bind('<<ComboboxSelected>>', updateComboBoxes)
 
+    driver_stand_b = Button(action_button_frame, text="Show Driver Standings",command=lambda: driver_standings(track_select.get(),season_select.get()))
+    driver_stand_b.grid(row=1,column=0,pady=10)
+    constructor_stand_b = Button(action_button_frame, text="Show Constructor Standings",command=lambda : constructor_standings(track_select.get(),season_select.get()))
+    constructor_stand_b.grid(row=2,column=0,pady=10)
+    track_map_b = Button(action_button_frame, text="Show Track", command=track_map)
+    track_map_b.grid(row=3,column=0,pady=10)
+    results_b = Button(action_button_frame, text="Show Results",command=lambda : show_session_results(session_select.get(),track_select.get(),season_select.get()))
+    results_b.grid(row=4,column=0,pady=10)
+    fastest_lap_b = Button(action_button_frame, text="Show Fastest Lap",command=lambda : draw_fastest_lap(season_select.get(),track_select.get(),session_select.get()))
+    fastest_lap_b.grid(row=5,column=0,pady=10)
     
 
 
@@ -127,17 +156,6 @@ canvasFrame.grid(row=2,column=0,columnspan=4)
 canvas = Canvas(canvasFrame)
 canvas.grid()
 
-# track_entry_frame = Frame(root)
-# track_entry_frame.grid(column=1,row=0,rowspan=1,columnspan=2)
-# track_entry_label = Label(track_entry_frame, text="Enter Track")
-# track_entry_label.grid(column=0,row=1)
-# track_entry = Entry(track_entry_frame)
-# track_entry.grid(column=0,row=2)
-# track_button = Button(track_entry_frame, text="Show Map",command=track_map)
-# track_button.grid(row=3,column=0)
-
 create_api()
-# driver_standings()
-# constructor_standings()
 
 root.mainloop()

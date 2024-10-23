@@ -2,6 +2,8 @@ import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 import numpy as np
 from api_calls import *
+from matplotlib.collections import LineCollection
+import matplotlib as mpl
 
 def rotate(xy, *, angle):
     rot_mat = np.array([[np.cos(angle), np.sin(angle)],
@@ -49,4 +51,33 @@ def draw_track_map(track_name,year):
     track_plot.axis('equal')
     plt.tight_layout()
 
+    return fig
+
+def plot_fastest_lap(season, track, session):
+    lap = get_fastest_lap(season, track, session)
+
+    x = lap.telemetry['X']
+    y = lap.telemetry['Y']
+    color = lap.telemetry['Speed']
+
+    points = np.array([x,y]).T.reshape(-1,1,2)
+    segments = np.concatenate([points[:-1],points[1:]], axis=1)
+
+    fig, ax = plt.subplots(sharex=True, sharey=True, figsize=(5,5))
+    fig.suptitle(f"Fastest Lap for {track} in {season} {session}")
+
+    plt.subplots_adjust(left=0.1,right=0.9,top=0.9,bottom=0.12)
+    ax.axis('off')
+    
+    ax.plot(lap.telemetry['X'], lap.telemetry['Y'], color='black',linewidth=5)
+    norm = plt.Normalize(color.min(), color.max())
+    colormap = plt.cm.get_cmap('magma')
+    lc = LineCollection(segments, cmap=colormap, norm=norm)
+
+    lc.set_array(color)
+    line = ax.add_collection(lc)
+
+    cbaxes = fig.add_axes([0.25,0.05,0.5,0.05])
+    normlegend = mpl.colors.Normalize(vmin=color.min(), vmax=color.max())
+    legend = mpl.colorbar.ColorbarBase(cbaxes, cmap=colormap, norm=normlegend, orientation='horizontal')
     return fig

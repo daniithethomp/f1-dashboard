@@ -6,12 +6,13 @@ def create_api():
     global ergast 
     ergast = Ergast()
 
-def get_driver_standings(track, season):
+def get_driver_standings(track=None, season=None):
     event = fastf1.get_event(int(season), track)
     return ergast.get_driver_standings(season=int(season),round=event['RoundNumber'], result_type='raw')\
     
-def get_constructor_standings():
-    return ergast.get_constructor_standings(season='current', result_type='raw')
+def get_constructor_standings(track=None, season=None):
+    event = fastf1.get_event(int(season), track)
+    return ergast.get_constructor_standings(season=int(season), round=event['RoundNumber'], result_type='raw')
 
 def get_data_for_track_map(track_name,year):
     try:
@@ -40,3 +41,13 @@ def get_all_seasons(circuit=None):
 
 def get_event(season, circuit):
     return fastf1.get_event(season,circuit)
+
+def get_session_results(season, circuit, session):
+    session= fastf1.get_session(year=int(season),gp=circuit,identifier=session)
+    session._load_drivers_results()
+    return session.results
+
+def get_fastest_lap(season, track, session):
+    session = fastf1.get_session(int(season), track, session)
+    session.load()
+    return session.laps.pick_fastest()
