@@ -9,12 +9,18 @@ import datetime
 def driver_standings(track, season):
     driver_standings_results = get_driver_standings(track, season)[0]
     count = 0
+    global canvas
+    try:
+        canvas.get_tk_widget().grid_forget()
+    except Exception as e:
+        canvas.grid_forget()
+    canvas = Frame(canvasFrame)
     for driver in driver_standings_results["DriverStandings"]:
         text = f"{driver['position']} {driver['Driver']['driverId']} - {driver['points']}"
-        canvas.grid_forget()
-        label = Label(canvasFrame, text=text)
+        label = Label(canvas, text=text)
         label.grid(row=(count % 10),column=(count // 10))
         count += 1
+    canvas.grid(row=0,column=0)
 
 def constructor_standings():
     constructor_standings_label_frame = LabelFrame(root,text="Constructor Standings")
@@ -30,10 +36,11 @@ def track_map():
     season = season_select.get()
     print(track,season)
     fig = draw_track_map(track,season)
+    global canvas
     canvas.grid_forget()
-    new_canvas = FigureCanvasTkAgg(fig, master=canvasFrame)
-    new_canvas.draw()
-    new_canvas.get_tk_widget().grid(row=4,column=0)
+    canvas = FigureCanvasTkAgg(fig, master=canvasFrame)
+    canvas.draw()
+    canvas.get_tk_widget().grid(row=4,column=0)
 
 def driver_view(root):
     pass
